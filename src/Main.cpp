@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <vector>
 #include <cctype>
 #include <cstdlib>
 
@@ -8,17 +7,18 @@
 
 using json = nlohmann::json;
 
-json decode_bencoded_value(const std::string& encoded_value, size_t& pos);
+auto decode_bencoded_value(const std::string& encoded_value, size_t& pos) -> json;
 
-long long int decode_integer(const std::string& encoded_value, size_t& pos)
+auto decode_integer(const std::string& encoded_value, size_t& pos) -> int64_t
 {
+    pos++;
     const auto end = encoded_value.find_first_of('e', pos);
     const std::string number_string = encoded_value.substr(pos, end);
-    pos = end;
+    pos = end + 1;
     return std::strtoll(number_string.c_str(), nullptr, 10);
 }
 
-int64_t decode_string_length(const std::string& encoded_value, const size_t pos, size_t& colon_index)
+auto decode_string_length(const std::string& encoded_value, const size_t pos, size_t& colon_index) -> int64_t
 {
     colon_index = encoded_value.find(':');
     const std::string number_string = encoded_value.substr(pos, colon_index);
@@ -27,16 +27,16 @@ int64_t decode_string_length(const std::string& encoded_value, const size_t pos,
     return length;
 }
 
-std::string decode_string(const std::string& encoded_value, size_t& pos)
+auto decode_string(const std::string& encoded_value, size_t& pos) -> std::string
 {
     size_t colon_index = 0;
     const int64_t length = decode_string_length(encoded_value, pos, colon_index);
     std::string str = encoded_value.substr(colon_index + 1, length);
-    pos = colon_index + length;
+    pos = colon_index + length + 1;
     return str;
 }
 
-json decode_list(const std::string& encoded_value, size_t& pos)
+auto decode_list(const std::string& encoded_value, size_t& pos) -> json
 {
     json list = json::array();
     pos++;
@@ -51,30 +51,25 @@ json decode_list(const std::string& encoded_value, size_t& pos)
     return list;
 }
 
-json decode_bencoded_value(const std::string& encoded_value, size_t& pos)
+auto decode_bencoded_value(const std::string& encoded_value, size_t& pos) -> json
 {
     // string
-    if (std::isdigit(encoded_value[0]))
+    // Example: "5:hello" -> "hello"
+    if (std::isdigit(encoded_value[pos]))
     {
-        // Example: "5:hello" -> "hello"
-        if (encoded_value.contains(':'))
-        {
-            return json(decode_string(encoded_value, pos));
-        }
-
-        throw std::runtime_error("Invalid encoded value: " + encoded_value);
+        return json(decode_string(encoded_value, pos));
     }
 
     // Integer
     // Example: "i42e" -> 42
-    if (encoded_value.starts_with('i') && encoded_value.ends_with('e'))
+    if (encoded_value[pos] == 'i')
     {
         return json(decode_integer(encoded_value, pos));
     }
 
     // List
     // Example: "l5:helloi42ee" -> ["hello", 42] 
-    if (encoded_value.starts_with('l') && encoded_value.ends_with('e'))
+    if (encoded_value[pos] == 'l')
     {
         return decode_list(encoded_value, pos);
     }
@@ -82,8 +77,7 @@ json decode_bencoded_value(const std::string& encoded_value, size_t& pos)
     throw std::runtime_error("Unhandled encoded value: " + encoded_value);
 }
 
-
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     // Flush after every std::cout / std::cerr
     std::cout << std::unitbuf;
@@ -95,9 +89,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    const std::string command = argv[1];
-
-    if (command == "decode")
+    if (const std::string command = argv[1]; command == "decode")
     {
         if (argc < 3)
         {
@@ -106,7 +98,8 @@ int main(int argc, char* argv[])
         }
 
         const std::string encoded_value = argv[2];
-        const json decoded_value = decode_bencoded_value(encoded_value);
+        size_t pos = 0;
+        const json decoded_value = decode_bencoded_value(encoded_value, pos);
         std::cout << decoded_value.dump() << std::endl;
     }
     else
