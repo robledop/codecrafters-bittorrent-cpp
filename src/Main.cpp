@@ -20,7 +20,7 @@ auto decode_integer(const std::string& encoded_value, size_t& pos) -> int64_t
 
 auto decode_string_length(const std::string& encoded_value, const size_t pos, size_t& colon_index) -> int64_t
 {
-    colon_index = encoded_value.find(':');
+    colon_index = encoded_value.find(':', pos);
     const std::string number_string = encoded_value.substr(pos, colon_index);
     const int64_t length = std::strtoll(number_string.c_str(), nullptr, 10);
 
@@ -51,6 +51,23 @@ auto decode_list(const std::string& encoded_value, size_t& pos) -> json
     return list;
 }
 
+auto decode_dictionary(const std::string& encoded_value, size_t& pos) -> json
+{
+    json dictionary = json::object();
+    pos++;
+
+    while (encoded_value[pos] != 'e')
+    {
+        const auto key = decode_string(encoded_value, pos);
+        const auto value = decode_bencoded_value(encoded_value, pos);
+        dictionary[key] = value;
+    }
+
+    pos++;
+
+    return dictionary;
+}
+
 auto decode_bencoded_value(const std::string& encoded_value, size_t& pos) -> json
 {
     // string
@@ -72,6 +89,13 @@ auto decode_bencoded_value(const std::string& encoded_value, size_t& pos) -> jso
     if (encoded_value[pos] == 'l')
     {
         return decode_list(encoded_value, pos);
+    }
+
+    // Dictionary
+    // Example: d3:foo3:bar5:helloi52ee -> {"foo":"bar","hello":52}
+    if (encoded_value[pos] == 'd')
+    {
+        return decode_dictionary(encoded_value, pos);
     }
 
     throw std::runtime_error("Unhandled encoded value: " + encoded_value);
