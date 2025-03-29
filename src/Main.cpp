@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <fstream>
 
+#include "torrent.h"
 #include "lib/nlohmann/json.hpp"
 
 using json = nlohmann::json;
@@ -134,21 +135,17 @@ auto main(int argc, char* argv[]) -> int
         std::ifstream file(file_path);
         std::ostringstream buffer;
         buffer << file.rdbuf();
-        
+
         std::string content = buffer.str();
 
         size_t pos = 0;
         auto dictionary = decode_dictionary(content, pos);
 
-        auto announce = dictionary["announce"].get<std::string>();
-        auto info = dictionary["info"];
-        auto length = info["length"];
-        auto name = info["name"];
-        auto piece_length = info["piece length"];
-        auto pieces = info["pieces"];
+        Torrent torrent{dictionary};
 
-        std::cout << "Tracker URL: " << announce << std::endl;
-        std::cout << "Length: " << length << std::endl;
+        std::cout << "Tracker URL: " << torrent.announce << std::endl;
+        std::cout << "Length: " << torrent.info.length << std::endl;
+        std::cout << "Info Hash: " << torrent.info.sha1() << std::endl;
     }
     else
     {

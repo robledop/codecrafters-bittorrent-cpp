@@ -55,6 +55,18 @@ build CMakeFiles/bittorrent.dir/src/Main.cpp.o: CXX_COMPILER__bittorrent_unscann
   OBJECT_DIR = CMakeFiles/bittorrent.dir
   OBJECT_FILE_DIR = CMakeFiles/bittorrent.dir/src
 
+build CMakeFiles/bittorrent.dir/src/info.cpp.o: CXX_COMPILER__bittorrent_unscanned_Debug /home/robledo/source/codecrafters-bittorrent-cpp/src/info.cpp || cmake_object_order_depends_target_bittorrent
+  DEP_FILE = CMakeFiles/bittorrent.dir/src/info.cpp.o.d
+  FLAGS = -g -std=gnu++23 -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/bittorrent.dir
+  OBJECT_FILE_DIR = CMakeFiles/bittorrent.dir/src
+
+build CMakeFiles/bittorrent.dir/src/torrent.cpp.o: CXX_COMPILER__bittorrent_unscanned_Debug /home/robledo/source/codecrafters-bittorrent-cpp/src/torrent.cpp || cmake_object_order_depends_target_bittorrent
+  DEP_FILE = CMakeFiles/bittorrent.dir/src/torrent.cpp.o.d
+  FLAGS = -g -std=gnu++23 -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/bittorrent.dir
+  OBJECT_FILE_DIR = CMakeFiles/bittorrent.dir/src
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target bittorrent
@@ -63,7 +75,7 @@ build CMakeFiles/bittorrent.dir/src/Main.cpp.o: CXX_COMPILER__bittorrent_unscann
 #############################################
 # Link the executable bittorrent
 
-build bittorrent: CXX_EXECUTABLE_LINKER__bittorrent_Debug CMakeFiles/bittorrent.dir/src/Main.cpp.o
+build bittorrent: CXX_EXECUTABLE_LINKER__bittorrent_Debug CMakeFiles/bittorrent.dir/src/Main.cpp.o CMakeFiles/bittorrent.dir/src/info.cpp.o CMakeFiles/bittorrent.dir/src/torrent.cpp.o
   FLAGS = -g
   OBJECT_DIR = CMakeFiles/bittorrent.dir
   POST_BUILD = :
