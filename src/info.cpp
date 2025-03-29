@@ -1,6 +1,28 @@
 #include "info.h"
 #include "lib/sha1.hpp"
 
+std::string to_hex_string(const std::string& data)
+{
+    std::ostringstream oss;
+    oss << std::hex;
+    for (const unsigned char c : data)
+        oss << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+    return oss.str();
+}
+
+std::string hex_to_binary(const std::string& hex)
+{
+    std::string binary;
+    binary.reserve(hex.length() / 2);
+    for (size_t i = 0; i < hex.length(); i += 2)
+    {
+        std::string byteString = hex.substr(i, 2);
+        const char byte = static_cast<char>(std::strtol(byteString.c_str(), nullptr, 16));
+        binary.push_back(byte);
+    }
+    return binary;
+}
+
 auto Info::encode() const -> std::string
 {
     // TODO: generalize this
@@ -34,3 +56,15 @@ std::string Info::sha1() const
     return hash;
 }
 
+std::vector<std::string> Info::piece_hashes() const
+{
+    std::vector<std::string> piece_hashes;
+    const size_t length = pieces.length();
+
+    for (size_t i = 0; i < length; i += 20)
+    {
+        piece_hashes.push_back(to_hex_string(pieces.substr(i, 20)));
+    }
+    
+    return piece_hashes;
+}

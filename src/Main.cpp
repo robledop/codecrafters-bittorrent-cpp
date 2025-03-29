@@ -146,6 +146,12 @@ auto main(int argc, char* argv[]) -> int
         std::cout << "Tracker URL: " << torrent.announce << std::endl;
         std::cout << "Length: " << torrent.info.length << std::endl;
         std::cout << "Info Hash: " << torrent.info.sha1() << std::endl;
+        std::cout << "Piece Length: " << torrent.info.piece_length <<std::endl;
+        std::cout << "Piece Hashes" << std::endl;
+        for (const auto& piece_hash : torrent.info.piece_hashes())
+        {
+            std::cout << piece_hash << std::endl;
+        }
     }
     else
     {
