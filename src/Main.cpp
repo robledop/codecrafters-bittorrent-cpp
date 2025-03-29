@@ -2,6 +2,7 @@
 #include <string>
 #include <cctype>
 #include <cstdlib>
+#include <fstream>
 
 #include "lib/nlohmann/json.hpp"
 
@@ -58,7 +59,7 @@ auto decode_dictionary(const std::string& encoded_value, size_t& pos) -> json
 
     while (encoded_value[pos] != 'e')
     {
-        const auto key = decode_string(encoded_value, pos);
+        const auto key = decode_bencoded_value(encoded_value, pos);
         const auto value = decode_bencoded_value(encoded_value, pos);
         dictionary[key] = value;
     }
@@ -125,6 +126,29 @@ auto main(int argc, char* argv[]) -> int
         size_t pos = 0;
         const json decoded_value = decode_bencoded_value(encoded_value, pos);
         std::cout << decoded_value.dump() << std::endl;
+    }
+    else if (command == "info")
+    {
+        auto file_path = argv[2];
+
+        std::ifstream file(file_path);
+        std::ostringstream buffer;
+        buffer << file.rdbuf();
+        
+        std::string content = buffer.str();
+
+        size_t pos = 0;
+        auto dictionary = decode_dictionary(content, pos);
+
+        auto announce = dictionary["announce"].get<std::string>();
+        auto info = dictionary["info"];
+        auto length = info["length"];
+        auto name = info["name"];
+        auto piece_length = info["piece length"];
+        auto pieces = info["pieces"];
+
+        std::cout << "Tracker URL: " << announce << std::endl;
+        std::cout << "Length: " << length << std::endl;
     }
     else
     {
