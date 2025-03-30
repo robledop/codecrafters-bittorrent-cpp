@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <fstream>
 #include <cpr/cpr.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #include "b_decoder.h"
 #include "peers.h"
@@ -83,6 +86,87 @@ auto main(int argc, char* argv[]) -> int
         {
             std::cout << ip << ":" << port << std::endl;
         }
+    }
+    else if (command == "handshake")
+    {
+        const auto file_path = argv[2];
+        const Torrent torrent = Torrent::parse_torrent_file(file_path);
+
+        // <peer_ip>:<peer_port>
+        const std::string peer = argv[3];
+        std::cerr << peer << std::endl;
+
+        std::string ip = peer.substr(0, peer.find(':'));
+        std::string port_str = peer.substr(peer.find(':') + 1);
+        int port = std::stoi(port_str);
+
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0)
+        {
+            std::cerr << "Socket creation failed." << std::endl;
+            return 1;
+        }
+
+        sockaddr_in peer_addr = {};
+        peer_addr.sin_family = AF_INET;
+        peer_addr.sin_port = htons(port);
+        if (inet_pton(AF_INET, ip.c_str(), &peer_addr.sin_addr) <= 0)
+        {
+            std::cerr << "Invalid address / Address not supported." << std::endl;
+            return 1;
+        }
+
+        if (connect(sock, reinterpret_cast<sockaddr*>(&peer_addr), sizeof(peer_addr)) < 0)
+        {
+            std::cerr << "Connection failed." << std::endl;
+            return 1;
+        }
+
+        unsigned char handshake[68] = {};
+
+        handshake[0] = 19;
+
+        auto protocol = "BitTorrent protocol";
+        std::memcpy(handshake + 1, protocol, 19);
+
+        std::memcpy(handshake + 28, hex_to_binary(torrent.info.sha1()).c_str(), 20);
+        std::memcpy(handshake + 48, "robledo-pazotto-bitt", 20);
+
+        if (ssize_t sent_bytes = send(sock, handshake, sizeof(handshake), 0); sent_bytes != sizeof(handshake))
+        {
+            std::cerr << "Send failed." << std::endl;
+        }
+        else
+        {
+            std::cout << "Sent " << sent_bytes << " bytes." << std::endl;
+        }
+
+        unsigned char handshake_response[68] = {};
+        ssize_t received_bytes = recv(sock, handshake_response, sizeof(handshake_response), 0);
+        if (received_bytes < 0)
+        {
+            std::cerr << "Error: Failed to receive handshake response." << std::endl;
+            close(sock);
+            return 1;
+        }
+
+        if (received_bytes != sizeof(handshake_response))
+        {
+            std::cerr << "Warning: Incomplete handshake response received ("
+                << received_bytes << " bytes)." << std::endl;
+        }
+        else
+        {
+            std::cout << "Received handshake response successfully." << std::endl;
+        }
+
+        std::string response(reinterpret_cast<char*>(handshake_response), 68);
+        std::string peer_id = response.substr(48, 20);
+
+        std::cout << "Peer ID: " << to_hex_string(peer_id) << std::endl;
+
+
+        close(sock);
     }
     else
     {
