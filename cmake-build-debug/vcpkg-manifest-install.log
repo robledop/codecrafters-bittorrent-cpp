@@ -1,0 +1,10 @@
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/c++
+All requested packages are currently installed.
+Total install time: 112 us
+cpr provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(cpr CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE cpr::cpr)
+

@@ -15,13 +15,7 @@ struct Info
     // is the SHA1 hash of the piece at the corresponding index.
     std::string pieces;
 
-    explicit Info(json json_object):
-        length{json_object["length"]},
-        name{json_object["name"]},
-        piece_length{json_object["piece length"]},
-        pieces{json_object["pieces"]}
-    {
-    }
+    explicit Info(json json_object);
 
     [[nodiscard]] std::string encode() const;
     [[nodiscard]] std::string sha1() const;

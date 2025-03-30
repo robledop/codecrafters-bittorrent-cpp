@@ -1,26 +1,15 @@
 #include "info.h"
+
+#include "util.h"
 #include "lib/sha1.hpp"
 
-std::string to_hex_string(const std::string& data)
-{
-    std::ostringstream oss;
-    oss << std::hex;
-    for (const unsigned char c : data)
-        oss << std::setw(2) << std::setfill('0') << static_cast<int>(c);
-    return oss.str();
-}
 
-std::string hex_to_binary(const std::string& hex)
+Info::Info(json json_object):
+    length{json_object["length"]},
+    name{json_object["name"]},
+    piece_length{json_object["piece length"]},
+    pieces{json_object["pieces"]}
 {
-    std::string binary;
-    binary.reserve(hex.length() / 2);
-    for (size_t i = 0; i < hex.length(); i += 2)
-    {
-        std::string byteString = hex.substr(i, 2);
-        const char byte = static_cast<char>(std::strtol(byteString.c_str(), nullptr, 16));
-        binary.push_back(byte);
-    }
-    return binary;
 }
 
 auto Info::encode() const -> std::string
@@ -48,7 +37,7 @@ auto Info::encode() const -> std::string
     return encoded_dictionary;
 }
 
-std::string Info::sha1() const
+auto Info::sha1() const -> std::string
 {
     SHA1 sha1;
     sha1.update(encode());
@@ -56,7 +45,7 @@ std::string Info::sha1() const
     return hash;
 }
 
-std::vector<std::string> Info::piece_hashes() const
+auto Info::piece_hashes() const -> std::vector<std::string>
 {
     std::vector<std::string> piece_hashes;
     const size_t length = pieces.length();
