@@ -40,7 +40,7 @@ auto Peers::get_incomplete() const -> int64_t
     return incomplete;
 }
 
-auto Peers::get_peers() -> std::vector<std::pair<std::string, int64_t>>
+auto Peers::get_peers() const -> std::vector<std::pair<std::string, int>>
 {
     return peers;
 }

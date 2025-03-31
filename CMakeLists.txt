@@ -24,6 +24,9 @@ add_executable(bittorrent ${SOURCE_FILES}
         src/b_decoder.h
         src/util.h
         src/peers.cpp
-        src/peers.h)
+        src/peers.h
+        src/handshake.cpp
+        src/handshake.h
+        src/Message.h)
 
 target_link_libraries(bittorrent PRIVATE cpr::cpr)

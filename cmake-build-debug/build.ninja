@@ -65,6 +65,14 @@ build CMakeFiles/bittorrent.dir/src/b_decoder.cpp.o: CXX_COMPILER__bittorrent_un
   OBJECT_DIR = CMakeFiles/bittorrent.dir
   OBJECT_FILE_DIR = CMakeFiles/bittorrent.dir/src
 
+build CMakeFiles/bittorrent.dir/src/handshake.cpp.o: CXX_COMPILER__bittorrent_unscanned_Debug /home/robledo/source/codecrafters-bittorrent-cpp/src/handshake.cpp || cmake_object_order_depends_target_bittorrent
+  DEFINES = -DCURL_STATICLIB
+  DEP_FILE = CMakeFiles/bittorrent.dir/src/handshake.cpp.o.d
+  FLAGS = -g -std=gnu++23 -fdiagnostics-color=always
+  INCLUDES = -isystem /home/robledo/source/codecrafters-bittorrent-cpp/cmake-build-debug/vcpkg_installed/x64-linux/include
+  OBJECT_DIR = CMakeFiles/bittorrent.dir
+  OBJECT_FILE_DIR = CMakeFiles/bittorrent.dir/src
+
 build CMakeFiles/bittorrent.dir/src/info.cpp.o: CXX_COMPILER__bittorrent_unscanned_Debug /home/robledo/source/codecrafters-bittorrent-cpp/src/info.cpp || cmake_object_order_depends_target_bittorrent
   DEFINES = -DCURL_STATICLIB
   DEP_FILE = CMakeFiles/bittorrent.dir/src/info.cpp.o.d
@@ -97,7 +105,7 @@ build CMakeFiles/bittorrent.dir/src/torrent.cpp.o: CXX_COMPILER__bittorrent_unsc
 #############################################
 # Link the executable bittorrent
 
-build bittorrent: CXX_EXECUTABLE_LINKER__bittorrent_Debug CMakeFiles/bittorrent.dir/src/Main.cpp.o CMakeFiles/bittorrent.dir/src/b_decoder.cpp.o CMakeFiles/bittorrent.dir/src/info.cpp.o CMakeFiles/bittorrent.dir/src/peers.cpp.o CMakeFiles/bittorrent.dir/src/torrent.cpp.o | vcpkg_installed/x64-linux/debug/lib/libcpr.a vcpkg_installed/x64-linux/debug/lib/libcurl-d.a vcpkg_installed/x64-linux/debug/lib/libz.a vcpkg_installed/x64-linux/debug/lib/libssl.a vcpkg_installed/x64-linux/debug/lib/libcrypto.a
+build bittorrent: CXX_EXECUTABLE_LINKER__bittorrent_Debug CMakeFiles/bittorrent.dir/src/Main.cpp.o CMakeFiles/bittorrent.dir/src/b_decoder.cpp.o CMakeFiles/bittorrent.dir/src/handshake.cpp.o CMakeFiles/bittorrent.dir/src/info.cpp.o CMakeFiles/bittorrent.dir/src/peers.cpp.o CMakeFiles/bittorrent.dir/src/torrent.cpp.o | vcpkg_installed/x64-linux/debug/lib/libcpr.a vcpkg_installed/x64-linux/debug/lib/libcurl-d.a vcpkg_installed/x64-linux/debug/lib/libz.a vcpkg_installed/x64-linux/debug/lib/libssl.a vcpkg_installed/x64-linux/debug/lib/libcrypto.a
   FLAGS = -g
   LINK_LIBRARIES = vcpkg_installed/x64-linux/debug/lib/libcpr.a  vcpkg_installed/x64-linux/debug/lib/libcurl-d.a  vcpkg_installed/x64-linux/debug/lib/libz.a  vcpkg_installed/x64-linux/debug/lib/libssl.a  vcpkg_installed/x64-linux/debug/lib/libcrypto.a  -ldl
   OBJECT_DIR = CMakeFiles/bittorrent.dir

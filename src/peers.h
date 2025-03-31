@@ -13,7 +13,7 @@ class Peers
     int64_t min_interval;
     int64_t complete;
     int64_t incomplete;
-    std::vector<std::pair<std::string, int64_t>> peers;
+    std::vector<std::pair<std::string, int>> peers;
 
 public:
     explicit Peers(json response);
@@ -21,5 +21,5 @@ public:
     [[nodiscard]] auto get_min_interval() const -> int64_t;
     [[nodiscard]] auto get_complete() const -> int64_t;
     [[nodiscard]] auto get_incomplete() const -> int64_t;
-    auto get_peers() -> std::vector<std::pair<std::string, int64_t>>;
+    [[nodiscard]] auto get_peers() const -> std::vector<std::pair<std::string, int>>;
 };
