@@ -210,3 +210,9 @@
 344	370	1743340124471709143	_deps/curl-build/lib/CMakeFiles/libcurl_shared.dir/telnet.c.o	5a90f6b77597cf6d
 6	34	1743340124133702690	_deps/curl-build/lib/CMakeFiles/libcurl_shared.dir/cf-h2-proxy.c.o	84dc750b7435be25
 258	317	1743340124385707501	_deps/curl-build/lib/CMakeFiles/libcurl_shared.dir/pingpong.c.o	d70a4638e2652668
+1	2273	1743461659493605090	CMakeFiles/bittorrent.dir/src/Main.cpp.o	d4660b3d8f91d669
+1	2278	1743461700744352156	CMakeFiles/bittorrent.dir/src/Main.cpp.o	d4660b3d8f91d669
+1	1702	1743461718326670578	CMakeFiles/bittorrent.dir/src/info.cpp.o	df3b8292b28174
+1	2304	1743461718326670578	CMakeFiles/bittorrent.dir/src/Main.cpp.o	d4660b3d8f91d669
+1	2483	1743461718326670578	CMakeFiles/bittorrent.dir/src/torrent.cpp.o	10dffd2ac3ccffe6
+2483	2795	1743461720808715529	bittorrent	d01cfa9d04d3daeb

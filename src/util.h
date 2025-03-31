@@ -2,8 +2,10 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <netinet/in.h>
 
 #include "lib/sha1.hpp"
+#include "Message.h"
 
 inline auto to_hex_string(const std::string& data) -> std::string {
     std::ostringstream oss;
