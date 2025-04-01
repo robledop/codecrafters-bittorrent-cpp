@@ -14,7 +14,7 @@
 
 Torrent::Torrent(json json_object):
     announce{json_object["announce"]},
-    info{Info{json_object["info"]}} {
+    info{Info{json_object["info"]}}, tracker(get_tracker()) {
     std::cout << "Announce: " << announce << std::endl;
     std::cout << "Info: " << std::endl;
     std::cout << "\tName: " << info.name << std::endl;
@@ -109,7 +109,7 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
 
 void Torrent::download_piece(int piece_index, const std::string& file_name) const {
     // TODO: Remove the calls to get_tracker() and get_peers() from here
-    const auto tracker = get_tracker();
+    // const auto tracker = get_tracker();
     const auto peers = tracker.get_peers();
     auto [ip, port] = get_random_peer(peers);
 
@@ -244,7 +244,7 @@ void Torrent::download(std::string save_to) {
         save_to = info.name;
     }
 
-    const auto tracker = get_tracker();
+    // const auto tracker = get_tracker();
     const auto peers = tracker.get_peers();
     for (auto& peer : peers) {
         std::cout << "Peer: " << peer.first << ":" << peer.second << std::endl;

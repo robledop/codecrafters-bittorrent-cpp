@@ -12,6 +12,7 @@ struct Torrent
 {
     std::string announce;
     Info info;
+    Tracker tracker;
 
     explicit Torrent(json json_object);
     static auto parse_torrent_file(char* path) -> Torrent;
