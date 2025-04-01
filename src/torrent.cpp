@@ -241,13 +241,11 @@ void Torrent::download(std::string save_to) {
         save_to = info.name;
     }
 
-    // const auto tracker = get_tracker();
     const auto peers = tracker.get_peers();
     for (auto& peer : peers) {
         std::cout << "Peer: " << peer.first << ":" << peer.second << std::endl;
     }
-    // const auto number_of_workers = std::min(get_number_of_pieces(), static_cast<int>(peers.size()));
-    const auto number_of_workers = 5;
+    const auto number_of_workers = std::min(get_number_of_pieces(), static_cast<int>(peers.size()));
 
     std::cout << "Starting download with " << number_of_workers << " workers." << std::endl;
     std::vector<std::thread> workers{};
@@ -320,7 +318,7 @@ auto Torrent::work_queue_size() const -> size_t {
 auto Torrent::get_random_peer(std::vector<std::pair<std::string, int>> peers) -> std::pair<std::string, int> {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, peers.size() - 1);
+    std::uniform_int_distribution<> dis(0, peers.size());
     int randomNumber = dis(gen);
     return peers[randomNumber];
 }
