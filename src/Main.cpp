@@ -91,7 +91,7 @@ auto main(int argc, char* argv[]) -> int {
             << std::endl;
 
         // Read the torrent file to get the tracker URL
-        const auto torrent = Torrent::parse_torrent_file(torrent_file);
+        auto torrent = Torrent::parse_torrent_file(torrent_file);
         torrent.download_piece(piece_index, save_to);
     }
     else if (command == "download") {

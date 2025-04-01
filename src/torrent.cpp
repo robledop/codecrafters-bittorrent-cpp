@@ -24,6 +24,10 @@ Torrent::Torrent(json json_object):
     for (int i = 0; i < get_number_of_pieces(); i++) {
         work_queue.push(i);
     }
+
+    for (auto& peer : tracker.get_peers()) {
+        peers_queue.push(peer);
+    }
 }
 
 auto Torrent::parse_torrent_file(char* path) -> Torrent {
@@ -109,8 +113,8 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
     return Peer{peer_id, ip, port, sock};
 }
 
-void Torrent::download_piece(int piece_index, const std::string& file_name) const {
-    auto [ip, port] = get_random_peer(tracker.get_peers());
+void Torrent::download_piece(int piece_index, const std::string& file_name)  {
+    auto [ip, port] = peers_queue_pop();
 
     // Establish a TCP connection with a peer, and perform a handshake
     auto peer = handshake(ip, port);
@@ -217,6 +221,8 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) cons
     std::cout << "Writing to file " << file_path << std::endl;
     std::ofstream file(file_path, std::ios::binary);
     file.write(buffer.c_str(), buffer.length());
+
+    peers_queue_push({ip, port});
 }
 
 void Torrent::download_task(const std::string& save_to) {
@@ -311,19 +317,27 @@ auto Torrent::work_queue_empty() const -> bool {
     return work_queue.empty();
 }
 
-auto Torrent::work_queue_size() const -> size_t {
-    return work_queue.size();
-}
-
-auto Torrent::get_random_peer(std::vector<std::pair<std::string, int>> peers) -> std::pair<std::string, int> {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, peers.size());
-    int randomNumber = dis(gen);
-    return peers[randomNumber];
-}
-
 void Torrent::work_queue_push(const int piece_index) {
     std::lock_guard<std::mutex> lock(data_mutex);
     work_queue.push(piece_index);
+}
+
+auto Torrent::peers_queue_pop() -> std::pair<std::string, int> {
+    std::lock_guard<std::mutex> lock(data_mutex);
+    if (peers_queue.empty()) {
+        return {"", -1};
+    }
+
+    auto peer = peers_queue.front();
+    peers_queue.pop();
+    return peer;
+}
+
+auto Torrent::peers_queue_empty() const -> bool {
+    return peers_queue.empty();
+}
+
+void Torrent::peers_queue_push(const std::pair<std::string, int>& peer) {
+    std::lock_guard<std::mutex> lock(data_mutex);
+    peers_queue.push(peer);
 }
