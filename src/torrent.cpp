@@ -270,15 +270,15 @@ void Torrent::download(std::string save_to) {
         files.push_back(file_path);
     }
 
-    std::ofstream backup("/tmp/torrents/" + info.name, std::ios::binary);
+    // std::ofstream backup("/tmp/torrents/" + info.name, std::ios::binary);
     std::ofstream out(save_to, std::ios::binary);
     if (!out) {
         throw std::runtime_error("Error opening output file: " + save_to);
     }
 
-    if (!backup) {
-        throw std::runtime_error("Error opening backup file: /tmp/torrents/" + info.name);
-    }
+    // if (!backup) {
+    //     throw std::runtime_error("Error opening backup file: /tmp/torrents/" + info.name);
+    // }
 
     for (const auto& fileName : files) {
         std::ifstream in(fileName, std::ios::binary);
@@ -287,16 +287,16 @@ void Torrent::download(std::string save_to) {
         }
 
         out << in.rdbuf();
-        in.clear();
-        in.seekg(0);
-        backup << in.rdbuf();
+        // in.clear();
+        // in.seekg(0);
+        // backup << in.rdbuf();
         in.close();
     }
 
     out.close();
-    backup.close();
+    // backup.close();
     std::cout << "Files have been combined into " << save_to << std::endl;
-    std::cout << "Files have been combined into /tmp/torrents/" << info.name << std::endl;
+    // std::cout << "Files have been combined into /tmp/torrents/" << info.name << std::endl;
 }
 
 auto Torrent::get_number_of_pieces() const -> int {
