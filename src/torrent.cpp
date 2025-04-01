@@ -73,7 +73,7 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
     peer_addr.sin_family = AF_INET;
     peer_addr.sin_port = htons(port);
     if (inet_pton(AF_INET, ip.c_str(), &peer_addr.sin_addr) <= 0) {
-        throw std::runtime_error("Invalid address / Address not supported.");
+        throw std::runtime_error("Invalid address / Address not supported. " + ip);
     }
 
     if (connect(sock, reinterpret_cast<sockaddr*>(&peer_addr), sizeof(peer_addr)) < 0) {
