@@ -1,7 +1,7 @@
 Detecting compiler hash for triplet x64-linux...
 Compiler found: /usr/bin/c++
 All requested packages are currently installed.
-Total install time: 66.7 us
+Total install time: 49.8 us
 cpr provides CMake targets:
 
   # this is heuristically generated, and may not be correct

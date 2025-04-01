@@ -1,6 +1,6 @@
-#include "peers.h"
+#include "tracker.h"
 
-Peers::Peers(json response): interval{response["interval"]},
+Tracker::Tracker(json response): interval{response["interval"]},
                              min_interval{response["min interval"]},
                              complete{response["complete"]},
                              incomplete{response["incomplete"]}
@@ -20,27 +20,27 @@ Peers::Peers(json response): interval{response["interval"]},
     }
 }
 
-auto Peers::get_interval() const -> int64_t
+auto Tracker::get_interval() const -> int64_t
 {
     return interval;
 }
 
-auto Peers::get_min_interval() const -> int64_t
+auto Tracker::get_min_interval() const -> int64_t
 {
     return min_interval;
 }
 
-auto Peers::get_complete() const -> int64_t
+auto Tracker::get_complete() const -> int64_t
 {
     return complete;
 }
 
-auto Peers::get_incomplete() const -> int64_t
+auto Tracker::get_incomplete() const -> int64_t
 {
     return incomplete;
 }
 
-auto Peers::get_peers() const -> std::vector<std::pair<std::string, int>>
+auto Tracker::get_peers() const -> std::vector<std::pair<std::string, int>>
 {
     return peers;
 }

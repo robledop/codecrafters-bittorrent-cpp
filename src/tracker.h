@@ -7,7 +7,7 @@
 
 using json = nlohmann::json;
 
-class Peers
+class Tracker
 {
     int64_t interval;
     int64_t min_interval;
@@ -16,7 +16,7 @@ class Peers
     std::vector<std::pair<std::string, int>> peers;
 
 public:
-    explicit Peers(json response);
+    explicit Tracker(json response);
     [[nodiscard]] auto get_interval() const -> int64_t;
     [[nodiscard]] auto get_min_interval() const -> int64_t;
     [[nodiscard]] auto get_complete() const -> int64_t;
