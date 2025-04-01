@@ -249,11 +249,11 @@ void Torrent::download(std::string save_to) {
     for (auto& peer : peers) {
         std::cout << "Peer: " << peer.first << ":" << peer.second << std::endl;
     }
-    // const auto number_of_workers = std::min(get_number_of_pieces(), static_cast<int>(peers.size()));
+    const auto number_of_workers = std::min(get_number_of_pieces(), static_cast<int>(peers.size()));
 
-    std::cout << "Starting download with " << get_number_of_pieces() << " workers." << std::endl;
+    std::cout << "Starting download with " << number_of_workers << " workers." << std::endl;
     std::vector<std::thread> workers{};
-    for (int i = 0; i < get_number_of_pieces(); i++) {
+    for (int i = 0; i < 1; i++) {
         std::thread t{&Torrent::download_task, this, save_to};
         workers.push_back(std::move(t));
     }
