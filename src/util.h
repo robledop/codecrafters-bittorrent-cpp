@@ -64,6 +64,7 @@ inline auto receive_message(const int sockfd) -> Message {
     uint32_t length_be;
     int bytes_received = recv(sockfd, &length_be, 4, 0);
     if (bytes_received != 4) {
+        return {CHOKE, ""};
         close(sockfd);
         throw std::runtime_error("Failed to receive message length. Expected 4 bytes, received: " +
             std::to_string(bytes_received)
