@@ -250,7 +250,7 @@ void Torrent::download(std::string save_to) {
 
     std::cout << "Starting download with " << number_of_workers << " workers." << std::endl;
     std::vector<std::thread> workers{};
-    for (int i = 0; i < get_number_of_pieces(); i++) {
+    for (int i = 0; i < number_of_workers; i++) {
         std::thread t{&Torrent::download_task, this, save_to};
         workers.push_back(std::move(t));
     }
