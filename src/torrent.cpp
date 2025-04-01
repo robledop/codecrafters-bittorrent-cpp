@@ -14,7 +14,7 @@
 
 Torrent::Torrent(json json_object):
     announce{json_object["announce"]},
-    info{Info{json_object["info"]}}, tracker(get_tracker()) {
+    info{Info{json_object["info"]}} {
     std::cout << "Announce: " << announce << std::endl;
     std::cout << "Info: " << std::endl;
     std::cout << "\tName: " << info.name << std::endl;
@@ -25,8 +25,13 @@ Torrent::Torrent(json json_object):
         work_queue.push(i);
     }
 
-    for (auto& peer : tracker.get_peers()) {
-        peers_queue.push(peer);
+    try {
+        for (auto& peer : get_tracker().get_peers()) {
+            peers_queue.push(peer);
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error getting peers: " << e.what() << std::endl;
     }
 }
 
@@ -113,7 +118,7 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
     return Peer{peer_id, ip, port, sock};
 }
 
-void Torrent::download_piece(int piece_index, const std::string& file_name)  {
+void Torrent::download_piece(int piece_index, const std::string& file_name) {
     auto [ip, port] = peers_queue_pop();
 
     // Establish a TCP connection with a peer, and perform a handshake
@@ -247,11 +252,7 @@ void Torrent::download(std::string save_to) {
         save_to = info.name;
     }
 
-    const auto peers = tracker.get_peers();
-    for (auto& peer : peers) {
-        std::cout << "Peer: " << peer.first << ":" << peer.second << std::endl;
-    }
-    const auto number_of_workers = std::min(get_number_of_pieces(), static_cast<int>(peers.size()));
+    const auto number_of_workers = std::min(get_number_of_pieces(), static_cast<int>(peers_queue.size()));
 
     std::cout << "Starting download with " << number_of_workers << " workers." << std::endl;
     std::vector<std::thread> workers{};
