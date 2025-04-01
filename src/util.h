@@ -64,8 +64,10 @@ inline auto receive_message(const int sockfd) -> Message {
     uint32_t length_be;
     int bytes_received = recv(sockfd, &length_be, 4, 0);
     if (bytes_received != 4) {
-        close(sockfd );
-        throw std::runtime_error("Failed to receive message length");
+        close(sockfd);
+        throw std::runtime_error("Failed to receive message length. Expected 4 bytes, received: " +
+            std::to_string(bytes_received)
+        );
     }
 
     const uint32_t length = ntohl(length_be);
@@ -81,7 +83,8 @@ inline auto receive_message(const int sockfd) -> Message {
         bytes_received = recv(sockfd, buffer.data() + total_received, length - total_received, 0);
         if (bytes_received <= 0) {
             close(sockfd);
-            throw std::runtime_error("Failed to receive message length: " + std::to_string(bytes_received) + " bytes received.");
+            throw std::runtime_error(
+                "Failed to receive message length: " + std::to_string(bytes_received) + " bytes received.");
         }
         total_received += bytes_received;
     }

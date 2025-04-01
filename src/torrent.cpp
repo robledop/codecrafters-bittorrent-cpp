@@ -87,6 +87,7 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
     std::memcpy(handshake + 48, "robledo-pazotto-bitt", 20);
 
     if (const ssize_t sent_bytes = send(sock, handshake, sizeof(handshake), 0); sent_bytes != sizeof(handshake)) {
+        close(sock);
         throw std::runtime_error("Send failed.");
     }
 
@@ -98,6 +99,7 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
     }
 
     if (received_bytes != sizeof(handshake_response)) {
+        close(sock);
         throw std::runtime_error("Incomplete handshake response.");
     }
 
@@ -108,32 +110,27 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
 }
 
 void Torrent::download_piece(int piece_index, const std::string& file_name) const {
-    // TODO: Remove the calls to get_tracker() and get_peers() from here
-    // const auto tracker = get_tracker();
-    const auto peers = tracker.get_peers();
-    auto [ip, port] = get_random_peer(peers);
+    auto [ip, port] = get_random_peer(tracker.get_peers());
 
     // Establish a TCP connection with a peer, and perform a handshake
-    auto h = handshake(ip, port);
+    auto peer = handshake(ip, port);
 
     std::cout << "Peer: " << ip << ":" << port << std::endl;
-    std::cout << "Peer ID: " << to_hex_string(h.peer_id) << std::endl;
+    std::cout << "Peer ID: " << to_hex_string(peer.peer_id) << std::endl;
     std::cout << "Piece Index: " << piece_index << std::endl;
 
-    // Exchange multiple peer messages to download the file
-
     // Wait for bitfield message
-    auto bitfield_message = receive_message(h.socket);
+    auto bitfield_message = receive_message(peer.socket);
     if (bitfield_message.message_type != BITFIELD) {
-        close(h.socket);
+        close(peer.socket);
         throw std::runtime_error("Expected BITFIELD message, but received " + bitfield_message.message_type);
     }
 
-    send_message(h.socket, INTERESTED);
+    send_message(peer.socket, INTERESTED);
 
     // Wait for unchoke message
-    if (auto unchoke_message = receive_message(h.socket); unchoke_message.message_type != UNCHOKE) {
-        close(h.socket);
+    if (auto unchoke_message = receive_message(peer.socket); unchoke_message.message_type != UNCHOKE) {
+        close(peer.socket);
         throw std::runtime_error("Expected UNCHOKE message, but received " + unchoke_message.message_type);
     }
 
@@ -178,11 +175,11 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) cons
         request_payload.append(reinterpret_cast<char*>(&begin_be), sizeof(uint32_t));
         request_payload.append(reinterpret_cast<char*>(&length_be), sizeof(uint32_t));
 
-        send_message(h.socket, REQUEST, request_payload);
+        send_message(peer.socket, REQUEST, request_payload);
 
-        auto piece_message = receive_message(h.socket);
+        auto piece_message = receive_message(peer.socket);
         if (piece_message.message_type != PIECE) {
-            close(h.socket);
+            close(peer.socket);
             throw std::runtime_error("Expected PIECE, but received " + piece_message.message_type);
         }
 
@@ -192,7 +189,7 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) cons
 
         // Check if it is the same as requested
         if (received_piece_index != piece_index || received_piece_begin != begin) {
-            close(h.socket);
+            close(peer.socket);
             throw std::runtime_error("Piece index or begin mismatch");
         }
 
@@ -204,14 +201,14 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) cons
     std::string expected_piece_hash = info.piece_hashes()[piece_index];
 
     if (piece_hash != expected_piece_hash) {
-        close(h.socket);
+        close(peer.socket);
         throw std::runtime_error(
             "Piece hash mismatch. Expected : " + expected_piece_hash +
             ", but received " + piece_hash);
     }
 
     std::cout << "Piece received successfully" << std::endl;
-    close(h.socket);
+    close(peer.socket);
 
     std::string file_path = info.name + ".part" + std::to_string(piece_index);
     if (!file_name.empty()) {
