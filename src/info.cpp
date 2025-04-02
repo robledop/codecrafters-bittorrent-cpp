@@ -1,14 +1,19 @@
 #include "info.h"
 
 #include "util.h"
-#include "lib/sha1.hpp"
-
 
 Info::Info(json json_object):
     length{json_object["length"]},
     name{json_object["name"]},
     piece_length{json_object["piece length"]},
     pieces{json_object["pieces"]} {
+}
+
+Info::Info(const size_t length, const std::string& name, const size_t piece_length, const std::string& pieces):
+    length{length},
+    name{name},
+    piece_length{piece_length},
+    pieces{pieces} {
 }
 
 auto Info::encode() const -> std::string {

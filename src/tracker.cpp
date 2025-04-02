@@ -1,14 +1,12 @@
 #include "tracker.h"
 
 Tracker::Tracker(json response): interval{response["interval"]},
-                             min_interval{response["min interval"]},
-                             complete{response["complete"]},
-                             incomplete{response["incomplete"]}
-{
+                                 min_interval{response["min interval"]},
+                                 complete{response["complete"]},
+                                 incomplete{response["incomplete"]} {
     const auto peers_string = response["peers"].get<std::string>();
 
-    for (size_t i = 0; i < peers_string.length(); i += 6)
-    {
+    for (size_t i = 0; i < peers_string.length(); i += 6) {
         std::string ip = std::to_string(static_cast<unsigned char>(peers_string[i])) + "." +
             std::to_string(static_cast<unsigned char>(peers_string[i + 1])) + "." +
             std::to_string(static_cast<unsigned char>(peers_string[i + 2])) + "." +
@@ -20,27 +18,28 @@ Tracker::Tracker(json response): interval{response["interval"]},
     }
 }
 
-auto Tracker::get_interval() const -> int64_t
-{
+Tracker::Tracker(int64_t interval, int64_t min_interval, int64_t complete, int64_t incomplete,
+                 std::vector<std::pair<std::string, int>> peers) : interval(interval), min_interval(min_interval),
+                                                                   complete(complete), incomplete(incomplete),
+                                                                   peers(peers) {
+}
+
+auto Tracker::get_interval() const -> int64_t {
     return interval;
 }
 
-auto Tracker::get_min_interval() const -> int64_t
-{
+auto Tracker::get_min_interval() const -> int64_t {
     return min_interval;
 }
 
-auto Tracker::get_complete() const -> int64_t
-{
+auto Tracker::get_complete() const -> int64_t {
     return complete;
 }
 
-auto Tracker::get_incomplete() const -> int64_t
-{
+auto Tracker::get_incomplete() const -> int64_t {
     return incomplete;
 }
 
-auto Tracker::get_peers() const -> std::vector<std::pair<std::string, int>>
-{
+auto Tracker::get_peers() const -> std::vector<std::pair<std::string, int>> {
     return peers;
 }

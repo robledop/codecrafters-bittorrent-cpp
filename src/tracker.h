@@ -17,6 +17,8 @@ class Tracker
 
 public:
     explicit Tracker(json response);
+    Tracker(int64_t interval, int64_t min_interval, int64_t complete, int64_t incomplete,
+            std::vector<std::pair<std::string, int>> peers);
     [[nodiscard]] auto get_interval() const -> int64_t;
     [[nodiscard]] auto get_min_interval() const -> int64_t;
     [[nodiscard]] auto get_complete() const -> int64_t;

@@ -101,32 +101,11 @@ auto main(int argc, char* argv[]) -> int {
     }
     else if (command == "magnet_parse") {
         std::string magnet_link = argv[2];
-        // v1: magnet:?xt=urn:btih:<info-hash>&dn=<name>&tr=<tracker-url>&x.pe=<peer-address>
-        auto bith_start = magnet_link.find("xt=urn:btih:") + 12;
-        auto dn_start = magnet_link.find("dn=");
-        auto dn_end = magnet_link.find('&', dn_start + 3);
-        auto tr_start = magnet_link.find("tr=");
-        auto tr_end = magnet_link.find('&', tr_start + 3);
-        auto x_pe_start = magnet_link.find("&x.pe=");
-        auto x_pe_end = magnet_link.find('&', x_pe_start + 6);
-
-        auto info_hash = magnet_link.substr(bith_start, 40);
-        auto file_name = magnet_link.substr(dn_start + 3, dn_end - dn_start - 3);
-        auto tracker_url = magnet_link.substr(tr_start + 3, tr_end - tr_start - 3);
-        auto peer_address = magnet_link.substr(x_pe_start + 6, x_pe_end - x_pe_start - 6);
-
-        std::cout << "Info Hash: " << info_hash << std::endl;
-        if (tr_start != std::string::npos) {
-            std::cout << "Tracker URL: " << cpr::util::urlDecode(tracker_url) << std::endl;
-        }
-
-        if (dn_start != std::string::npos) {
-            std::cout << "File Name: " << file_name << std::endl;
-        }
-
-        if (x_pe_start != std::string::npos) {
-            std::cout << "Peer Address: " << peer_address << std::endl;
-        }
+        auto torrent = Torrent::parse_magnet_link(magnet_link);
+    }
+    else if (command == "magnet_handshake") {
+        std::string magnet_link = argv[2];
+        auto torrent = Torrent::parse_magnet_link(magnet_link);
     }
     else {
         std::cerr << "unknown command: " << command << std::endl;

@@ -16,6 +16,7 @@ struct Info
     std::string pieces;
 
     explicit Info(json json_object);
+    Info(size_t length, const std::string& name, size_t piece_length, const std::string& pieces);;
 
     [[nodiscard]] std::string encode() const;
     [[nodiscard]] std::string sha1() const;
