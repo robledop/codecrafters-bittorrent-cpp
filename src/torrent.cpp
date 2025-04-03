@@ -261,16 +261,7 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     extension_handshake[5] = 0; // extended message ID
     std::memcpy(extension_handshake.data() + 1, payload.c_str(), payload.size());
 
-    std::cout << "Sending extension handshake " << std::endl;
-
-    for (auto byte : extension_handshake) {
-        std::cout << static_cast<int>(byte) << " ";
-    }
-    std::cout << std::endl;
-
     send_message(sock, EXTENDED, extension_handshake);
-
-    std::cout << "Receiving extension handshake response " << std::endl;
 
     auto extended_handshake_response = receive_message(sock);
     if (extended_handshake_response.message_type != EXTENDED) {
@@ -283,10 +274,16 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
         throw std::runtime_error("Invalid extended handshake response");
     }
 
-    for (auto byte : extended_handshake_response.payload) {
-        std::cout << static_cast<int>(byte) << " ";
-    }
+    size_t pos = 0;
+    auto extended_message_payload = BDecoder::decode_bencoded_value(extended_handshake_response.payload.substr(1), pos);
 
+    auto m = extended_message_payload["m"];
+    if (m.find("ut_metadata") == m.end()) {
+        close(sock);
+        throw std::runtime_error("Peer does not support metadata");
+    }
+    int64_t peer_metadata_extension_id = m["ut_metadata"];
+    std::cout << "Peer Metadata Extension ID: " << peer_metadata_extension_id << std::endl;
 
     return Peer{peer_id, ip, port, sock};
 }
