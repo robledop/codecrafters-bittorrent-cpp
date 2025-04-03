@@ -342,7 +342,8 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
     // Wait for bitfield message
     if (auto bitfield_message = receive_message(peer.socket); bitfield_message.message_type != BITFIELD) {
         close(peer.socket);
-        throw std::runtime_error("Expected BITFIELD message, but received " + bitfield_message.message_type);
+        std::cerr << "Expected BITFIELD message, but received " + bitfield_message.message_type << std::endl;
+        return false;
     }
 
     send_message(peer.socket, INTERESTED);
@@ -350,7 +351,8 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
     // Wait for unchoke message
     if (auto unchoke_message = receive_message(peer.socket); unchoke_message.message_type != UNCHOKE) {
         close(peer.socket);
-        throw std::runtime_error("Expected UNCHOKE message, but received " + unchoke_message.message_type);
+        std::cerr << "Expected UNCHOKE message, but received " + unchoke_message.message_type << std::endl;
+        return false;
     }
 
     uint32_t number_of_pieces = get_number_of_pieces();
@@ -395,12 +397,17 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
         auto piece_message = receive_message(peer.socket);
         if (piece_message.message_type != PIECE) {
             close(peer.socket);
-            throw std::runtime_error("Expected PIECE, but received " + piece_message.message_type);
+            std::cerr << "Expected PIECE, but received " + piece_message.message_type << std::endl;
+
+            return false;
         }
 
         uint32_t received_piece_index = ntohl(*reinterpret_cast<uint32_t*>(piece_message.payload.data()));
         if (received_piece_index != piece_index) {
-            throw std::runtime_error("Incorrect piece index");
+            std::cerr << "Incorrect piece index. Expected: " << piece_index <<
+                ", but received: " << received_piece_index << std::endl;
+
+            return false;
         }
         uint32_t received_piece_begin = ntohl(*reinterpret_cast<uint32_t*>(piece_message.payload.data() + 4));
 
@@ -414,9 +421,10 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
 
     if (std::string expected_piece_hash = info.piece_hashes()[piece_index]; piece_hash != expected_piece_hash) {
         close(peer.socket);
-        throw std::runtime_error(
-            "Piece hash mismatch. Expected : " + expected_piece_hash +
-            ", but received " + piece_hash);
+        std::cerr << "Piece hash mismatch. Expected: " << expected_piece_hash <<
+            ", but received: " << piece_hash << std::endl;
+
+        return false;
     }
 
     std::cout << "Piece received successfully" << std::endl;
@@ -443,7 +451,8 @@ void Torrent::download_task(const std::string& save_to) {
         std::cout << "Downloading piece " << piece_index << std::endl;
         try {
             if (!download_piece(piece_index, save_to + ".part" + std::to_string(piece_index))) {
-                throw std::runtime_error("Piece download failed");
+                std::cerr << "Failed to download piece " << piece_index << std::endl;
+                work_queue_push(piece_index);
             }
         }
         catch (const std::exception& e) {
