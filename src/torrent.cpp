@@ -279,6 +279,7 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
 
     auto m = extended_message_payload["m"];
     if (m.find("ut_metadata") == m.end()) {
+
         close(sock);
         throw std::runtime_error("Peer does not support metadata");
     }
@@ -295,6 +296,24 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     std::memcpy(extended_request.data() + 1, extended_request_payload.c_str(), extended_request_payload.size());
 
     send_message(sock, EXTENDED, extended_request);
+
+
+    auto extended_metadata_response = receive_message(sock);
+    if (extended_metadata_response.message_type != EXTENDED) {
+        close(sock);
+        throw std::runtime_error("Expected EXTENDED message, but received " + extended_metadata_response.message_type);
+    }
+
+    pos = 0;
+    auto metadata_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
+    if (metadata_json["msg_type"] != EXTENDED_DATA) {
+        close(sock);
+        throw std::runtime_error("Invalid extended metadata response");
+    }
+
+    std::cout << metadata_json["total_size"].get<int64_t>() << std::endl;
+    
+
 
     return Peer{peer_id, ip, port, sock};
 }
