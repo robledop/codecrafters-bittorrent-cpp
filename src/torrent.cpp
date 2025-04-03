@@ -367,8 +367,6 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     std::string buffer{};
 
     // TODO: Use a random peer from the queue and check if it is online or not
-    auto x = peers_queue_pop();
-    peers_queue.push(x);
     auto [ip, port] = peers_queue_pop();
     if (port == -1) {
         std::cout << "No peers available" << std::endl;
