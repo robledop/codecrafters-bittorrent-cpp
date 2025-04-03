@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 
-
 struct Peer
 {
     std::string peer_id;

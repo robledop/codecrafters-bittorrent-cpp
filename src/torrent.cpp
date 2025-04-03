@@ -29,13 +29,8 @@ Torrent::Torrent(json json_object):
         work_queue.push(i);
     }
 
-    try {
-        for (auto& peer : tracker.get_peers()) {
-            peers_queue.push(peer);
-        }
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error getting peers: " << e.what() << std::endl;
+    for (auto& peer : tracker.get_peers()) {
+        peers_queue.push(peer);
     }
 }
 
@@ -82,10 +77,10 @@ auto Torrent::parse_magnet_link(const std::string& magnet_link) -> Torrent {
     const auto x_pe_start = magnet_link.find("&x.pe=");
     const auto x_pe_end = magnet_link.find('&', x_pe_start + 6);
 
-    auto info_hash = magnet_link.substr(bith_start, 40);
+    const auto info_hash = magnet_link.substr(bith_start, 40);
     const auto file_name = magnet_link.substr(dn_start + 3, dn_end - dn_start - 3);
     const auto tracker_url = magnet_link.substr(tr_start + 3, tr_end - tr_start - 3);
-    auto peer_address = magnet_link.substr(x_pe_start + 6, x_pe_end - x_pe_start - 6);
+    const auto peer_address = magnet_link.substr(x_pe_start + 6, x_pe_end - x_pe_start - 6);
 
     std::cout << "Info Hash: " << info_hash << std::endl;
     if (tr_start != std::string::npos) {
@@ -106,7 +101,7 @@ auto Torrent::parse_magnet_link(const std::string& magnet_link) -> Torrent {
 
 auto Torrent::get_tracker(std::string info_hash) const -> Tracker {
     try {
-        if (info_hash == "") {
+        if (info_hash.empty()) {
             info_hash = hex_to_binary(info.sha1());
         }
         std::cout << "Getting tracker" << std::endl;
@@ -223,7 +218,7 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     }
 
     unsigned char handshake_response[68] = {};
-    ssize_t received_bytes = recv(sock, handshake_response, sizeof(handshake_response), 0);
+    const ssize_t received_bytes = recv(sock, handshake_response, sizeof(handshake_response), 0);
     if (received_bytes < 0) {
         close(sock);
         throw std::runtime_error("Failed to receive handshake response.");
@@ -234,10 +229,67 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
         throw std::runtime_error("Incomplete handshake response.");
     }
 
-    const std::string response(reinterpret_cast<char*>(handshake_response), 68);
-    const std::string peer_id = response.substr(48, 20);
+    bool supports_extension = handshake_response[25] & 0x10;
+    if (!supports_extension) {
+        close(sock);
+        throw std::runtime_error("Peer does not support extensions.");
+    }
+
+    const std::string response{reinterpret_cast<char*>(handshake_response), 68};
+    const std::string peer_id{response.substr(48, 20)};
 
     std::cout << "Peer ID: " << to_hex_string(peer_id) << std::endl;
+
+    if (auto bitfield_message = receive_message(sock); bitfield_message.message_type != BITFIELD) {
+        close(sock);
+        throw std::runtime_error("Expected BITFIELD message, but received " + bitfield_message.message_type);
+    }
+
+    // Extension message: length (4 bytes) + message ID (1 byte) + extended message ID (1 byte) + payload (variable length)
+
+    json payload_json = json::parse(R"(
+    {
+      "m": {"ut_metadata": 16}
+    }
+)"
+    );
+
+    const std::string payload = BDecoder::encode_bencoded_value(payload_json);
+    const uint32_t message_length = payload.size() + 2;
+    unsigned char extension_handshake[message_length + 4] = {};
+    const uint32_t message_length_be = htonl(message_length);
+    std::memcpy(extension_handshake, &message_length_be, sizeof(uint32_t));
+    extension_handshake[4] = 20; // message ID
+    extension_handshake[5] = 0; // extended message ID
+    std::memcpy(extension_handshake + 6, payload.c_str(), payload.size());
+
+    std::cout << "Sending extension handshake " << std::endl;
+
+    for (auto byte : extension_handshake) {
+        std::cout << static_cast<int>(byte) << " ";
+    }
+    std::cout << std::endl;
+
+    if (const size_t sent_bytes = send(sock, extension_handshake, message_length + 4, 0);
+        sent_bytes != message_length + 4) {
+        close(sock);
+        throw std::runtime_error("Failed to send extension handshake.");
+    }
+
+    std::cout << "Receiving extension handshake response " << std::endl;
+
+    std::string extended_handshake_response{};
+    extended_handshake_response.resize(200);
+
+    if (const ssize_t extension_received_bytes = recv(sock, extended_handshake_response.data(), 200, 0);
+        extension_received_bytes < 0) {
+        close(sock);
+        throw std::runtime_error("Failed to receive extension handshake response.");
+    }
+
+    for (auto byte : extended_handshake_response) {
+        std::cout << static_cast<int>(byte) << " ";
+    }
 
     return Peer{peer_id, ip, port, sock};
 }
@@ -246,18 +298,18 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     constexpr uint32_t PIECE_BLOCK_SIZE = 16 * 1024;
     std::string buffer{};
 
+    // TODO: Use a random peer from the queue and check if it is online or not
     auto [ip, port] = peers_queue_pop();
 
     auto peer = handshake(ip, port);
 
-    std::cout << "Peer: " << ip << ":" << port << std::endl;
-    std::cout << "Peer ID: " << to_hex_string(peer.peer_id) << std::endl;
-    std::cout << "Piece Index: " << piece_index << std::endl;
+    std::cout << "Peer: " << ip << ":" << port <<
+        ", Peer ID: " << to_hex_string(peer.peer_id) <<
+        ", Piece Index: " << piece_index << std::endl;
 
     // TODO: Actually check if the peer has the piece
     // Wait for bitfield message
-    auto bitfield_message = receive_message(peer.socket);
-    if (bitfield_message.message_type != BITFIELD) {
+    if (auto bitfield_message = receive_message(peer.socket); bitfield_message.message_type != BITFIELD) {
         close(peer.socket);
         throw std::runtime_error("Expected BITFIELD message, but received " + bitfield_message.message_type);
     }
@@ -274,42 +326,42 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     uint32_t number_of_pieces = get_number_of_pieces();
     bool is_last_piece = piece_index == number_of_pieces - 1;
     uint32_t file_begin = piece_index * info.piece_length;
-    uint32_t actual_piece_length = is_last_piece ? info.length - file_begin : info.piece_length;
+    size_t actual_piece_length = is_last_piece ? info.length - file_begin : info.piece_length;
 
     buffer.resize(actual_piece_length);
 
     size_t number_of_piece_blocks = std::ceil(
         static_cast<double>(actual_piece_length) / static_cast<double>(PIECE_BLOCK_SIZE));
 
-    int remaining_bytes = actual_piece_length;
+    size_t remaining_bytes = actual_piece_length;
+
+    // TODO: Limit the number of requests to avoid overwhelming the peer
+    for (size_t block = 0; block < number_of_piece_blocks; block++) {
+        bool is_last_block = block == number_of_piece_blocks - 1;
+
+        uint32_t begin = block * PIECE_BLOCK_SIZE;
+        uint32_t block_length = is_last_block ? actual_piece_length - begin : PIECE_BLOCK_SIZE;
+
+        std::cout << "Piece block #" << block + 1 <<
+            " Piece index: " << piece_index <<
+            ", Begin: " << begin <<
+            ", Block length: " << block_length << std::endl;
+
+        std::string request_payload{};
+        request_payload.reserve(12);
+
+        uint32_t piece_index_be = htonl(piece_index);
+        uint32_t begin_be = htonl(begin);
+        uint32_t length_be = htonl(block_length);
+
+        request_payload.append(reinterpret_cast<char*>(&piece_index_be), sizeof(uint32_t));
+        request_payload.append(reinterpret_cast<char*>(&begin_be), sizeof(uint32_t));
+        request_payload.append(reinterpret_cast<char*>(&length_be), sizeof(uint32_t));
+
+        send_message(peer.socket, REQUEST, request_payload);
+    }
 
     while (remaining_bytes > 0) {
-        // TODO: Limit the number of requests to avoid overwhelming the peer
-        for (size_t block = 0; block < number_of_piece_blocks; block++) {
-            bool is_last_block = block == number_of_piece_blocks - 1;
-
-            uint32_t begin = block * PIECE_BLOCK_SIZE;
-            uint32_t block_length = is_last_block ? actual_piece_length - begin : PIECE_BLOCK_SIZE;
-
-            std::cout << "Piece block #" << block + 1 <<
-                " Piece index: " << piece_index <<
-                " Begin: " << begin <<
-                " Block length: " << block_length << std::endl;
-
-            std::string request_payload{};
-            request_payload.reserve(12);
-
-            uint32_t piece_index_be = htonl(piece_index);
-            uint32_t begin_be = htonl(begin);
-            uint32_t length_be = htonl(block_length);
-
-            request_payload.append(reinterpret_cast<char*>(&piece_index_be), sizeof(uint32_t));
-            request_payload.append(reinterpret_cast<char*>(&begin_be), sizeof(uint32_t));
-            request_payload.append(reinterpret_cast<char*>(&length_be), sizeof(uint32_t));
-
-            send_message(peer.socket, REQUEST, request_payload);
-        }
-
         auto piece_message = receive_message(peer.socket);
         if (piece_message.message_type != PIECE) {
             close(peer.socket);
@@ -329,9 +381,8 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     }
 
     std::string piece_hash = compute_sha1(buffer);
-    std::string expected_piece_hash = info.piece_hashes()[piece_index];
 
-    if (piece_hash != expected_piece_hash) {
+    if (std::string expected_piece_hash = info.piece_hashes()[piece_index]; piece_hash != expected_piece_hash) {
         close(peer.socket);
         throw std::runtime_error(
             "Piece hash mismatch. Expected : " + expected_piece_hash +
@@ -347,7 +398,7 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     }
     std::cout << "Writing to file " << file_path << std::endl;
     std::ofstream file(file_path, std::ios::binary);
-    file.write(buffer.c_str(), buffer.length());
+    file.write(buffer.c_str(), static_cast<long>(buffer.length()));
 
     peers_queue_push({ip, port});
 }
@@ -379,7 +430,7 @@ void Torrent::download(std::string save_to) {
     std::cout << "Starting download with " << number_of_workers << " workers." << std::endl;
     std::vector<std::thread> workers{};
     for (int i = 0; i < number_of_workers; i++) {
-        workers.emplace_back(std::thread{&Torrent::download_task, this, save_to});
+        workers.emplace_back(&Torrent::download_task, this, save_to);
     }
 
     for (auto& worker : workers) {
@@ -416,7 +467,7 @@ auto Torrent::get_number_of_pieces() const -> int {
 }
 
 auto Torrent::work_queue_pop() -> int {
-    std::lock_guard<std::mutex> lock(data_mutex);
+    std::lock_guard lock{data_mutex};
     if (work_queue.empty()) {
         return -1;
     }
@@ -426,7 +477,7 @@ auto Torrent::work_queue_pop() -> int {
 }
 
 auto Torrent::work_queue_empty() -> bool {
-    std::lock_guard<std::mutex> lock(data_mutex);
+    std::lock_guard<std::mutex> lock{data_mutex};
     return work_queue.empty();
 }
 

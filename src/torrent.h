@@ -4,9 +4,8 @@
 #include <random>
 
 #include "info.h"
+#include "peer.h"
 #include "tracker.h"
-
-class Peer;
 
 struct Torrent
 {
