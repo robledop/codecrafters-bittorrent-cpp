@@ -264,6 +264,10 @@ void Torrent::populate_magnet_info(int sock) {
     info.length = metadata_json["length"].get<size_t>();
     info.pieces = metadata_json["pieces"].get<std::string>();
 
+    for (int i = 0; i < get_number_of_pieces(); i++) {
+        work_queue.push(i);
+    }
+
     for (auto& peer : tracker.get_peers()) {
         peers_queue.push(peer);
     }
@@ -363,6 +367,8 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     std::string buffer{};
 
     // TODO: Use a random peer from the queue and check if it is online or not
+    auto x = peers_queue_pop();
+    peers_queue.push(x);
     auto [ip, port] = peers_queue_pop();
 
     auto peer = handshake(ip, port);

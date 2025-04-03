@@ -128,6 +128,18 @@ auto main(int argc, char* argv[]) -> int {
             std::cout << piece_hash << std::endl;
         }
     }
+    else if (command == "magnet_download_piece") {
+        std::string save_to = argv[3];
+        std::string magnet_link = argv[4];
+        int piece_index = std::stoi(argv[5]);
+        auto torrent = Torrent::parse_magnet_link(magnet_link);
+        torrent.tracker = torrent.get_tracker(hex_to_binary(torrent.info_hash));
+        auto first_peer = torrent.tracker.get_peers().at(0);
+        auto connected_peer = torrent.extension_handshake(first_peer.first, first_peer.second);
+        Torrent::magnet_handshake(connected_peer.socket);
+        torrent.populate_magnet_info(connected_peer.socket);
+        torrent.download_piece(piece_index, save_to);
+    }
     else {
         std::cerr << "unknown command: " << command << std::endl;
         return 1;
