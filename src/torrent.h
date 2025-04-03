@@ -26,7 +26,7 @@ struct Torrent
     static auto parse_magnet_link(const std::string& magnet_link) -> Torrent;
     [[nodiscard]] auto get_tracker(std::string info_hash = "") const -> Tracker;
     [[nodiscard]] auto handshake(const std::string& ip, int port) const -> Peer;
-    [[nodiscard]] auto magnet_handshake(const std::string& ip, int port, const std::string& info_hash) const -> Peer;
+    [[nodiscard]] auto magnet_handshake(const std::string& ip, int port, const std::string& info_hash) -> Peer;
     void download_piece(int piece_index, const std::string& file_name = "");
     void download_task(const std::string& save_to);
     void download(std::string save_to = "");

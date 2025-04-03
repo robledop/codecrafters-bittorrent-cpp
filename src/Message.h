@@ -19,7 +19,11 @@ struct Message
 {
     MessageType message_type;
     std::string payload;
+    ssize_t length;
 
-    Message(const MessageType message_type, const std::string& payload): message_type(message_type), payload(payload) {
+    Message(const MessageType message_type, const std::string& payload, ssize_t length):
+        message_type(message_type),
+        payload(payload),
+        length(length) {
     }
 };

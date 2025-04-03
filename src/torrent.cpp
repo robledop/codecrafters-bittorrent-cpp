@@ -180,7 +180,7 @@ auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
     return Peer{peer_id, ip, port, sock};
 }
 
-auto Torrent::magnet_handshake(const std::string& ip, int port, const std::string& info_hash) const -> Peer {
+auto Torrent::magnet_handshake(const std::string& ip, int port, const std::string& info_hash) -> Peer {
     std::cout << "Handshake: " << ip << ":" << port << std::endl;
 
     const int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -278,8 +278,8 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     auto extended_message_payload = BDecoder::decode_bencoded_value(extended_handshake_response.payload.substr(1), pos);
 
     auto m = extended_message_payload["m"];
+    auto metadata_size = extended_message_payload["metadata_size"].get<int64_t>();
     if (m.find("ut_metadata") == m.end()) {
-
         close(sock);
         throw std::runtime_error("Peer does not support metadata");
     }
@@ -287,9 +287,9 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     std::cout << "Peer Metadata Extension ID: " << peer_metadata_extension_id << std::endl;
 
     std::string extended_request;
-    
+
     json extended_request_payload_json = json::parse(R"({"msg_type": 0, "piece": 0})");
-    
+
     std::string extended_request_payload = BDecoder::encode_bencoded_value(extended_request_payload_json);
     extended_request.resize(extended_request_payload.size() + 1);
     extended_request[0] = static_cast<char>(peer_metadata_extension_id);
@@ -305,15 +305,23 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     }
 
     pos = 0;
-    auto metadata_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
-    if (metadata_json["msg_type"] != EXTENDED_DATA) {
+    auto header_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
+    if (header_json["msg_type"] != EXTENDED_DATA) {
         close(sock);
         throw std::runtime_error("Invalid extended metadata response");
     }
 
-    std::cout << metadata_json["total_size"].get<int64_t>() << std::endl;
-    
+    auto total_size = header_json["total_size"].get<int64_t>();
 
+    std::cout << "Metadata size: " << metadata_size << std::endl;
+    std::cout << "Total size: " << total_size << std::endl;
+
+    auto metadata_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
+
+    info.name = metadata_json["name"].get<std::string>();
+    info.piece_length = metadata_json["piece length"].get<size_t>();
+    info.length = metadata_json["length"].get<size_t>();
+    info.pieces = metadata_json["pieces"].get<std::string>();
 
     return Peer{peer_id, ip, port, sock};
 }
