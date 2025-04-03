@@ -107,6 +107,10 @@ auto main(int argc, char* argv[]) -> int {
         std::string magnet_link = argv[2];
         auto torrent = Torrent::parse_magnet_link(magnet_link);
     }
+    else if (command == "magnet_info") {
+        std::string magnet_link = argv[2];
+        auto torrent = Torrent::parse_magnet_link(magnet_link);
+    }
     else {
         std::cerr << "unknown command: " << command << std::endl;
         return 1;

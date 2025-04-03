@@ -249,7 +249,7 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
 
     json payload_json = json::parse(R"(
     {
-      "m": {"ut_metadata": 16}
+      "m": {"ut_metadata": 1}
     }
 )"
     );
@@ -258,7 +258,7 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     const uint32_t message_length = payload.size() + 1;
     std::string extension_handshake;
     extension_handshake.resize(message_length);
-    extension_handshake[5] = 0; // extended message ID
+    extension_handshake[5] = 0; // extended message ID. 0 is for extended handshake
     std::memcpy(extension_handshake.data() + 1, payload.c_str(), payload.size());
 
     send_message(sock, EXTENDED, extension_handshake);
@@ -284,6 +284,17 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     }
     int64_t peer_metadata_extension_id = m["ut_metadata"];
     std::cout << "Peer Metadata Extension ID: " << peer_metadata_extension_id << std::endl;
+
+    std::string extended_request;
+    
+    json extended_request_payload_json = json::parse(R"({"msg_type": 0, "piece": 0})");
+    
+    std::string extended_request_payload = BDecoder::encode_bencoded_value(extended_request_payload_json);
+    extended_request.resize(extended_request_payload.size() + 1);
+    extended_request[0] = static_cast<char>(peer_metadata_extension_id);
+    std::memcpy(extended_request.data() + 1, extended_request_payload.c_str(), extended_request_payload.size());
+
+    send_message(sock, EXTENDED, extended_request);
 
     return Peer{peer_id, ip, port, sock};
 }

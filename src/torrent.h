@@ -7,6 +7,13 @@
 #include "peer.h"
 #include "tracker.h"
 
+enum ExtendedMessageType
+{
+    EXTENDED_REQUEST = 0,
+    EXTENDED_DATA = 1,
+    EXTENDED_REJECT = 2,
+};
+
 struct Torrent
 {
     std::string announce;
