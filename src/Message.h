@@ -12,6 +12,7 @@ enum MessageType
     REQUEST = 6,
     PIECE = 7,
     CANCEL = 8,
+    EXTENDED = 20,
 };
 
 struct Message

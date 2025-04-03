@@ -255,13 +255,11 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     );
 
     const std::string payload = BDecoder::encode_bencoded_value(payload_json);
-    const uint32_t message_length = payload.size() + 2;
-    unsigned char extension_handshake[message_length + 4] = {};
-    const uint32_t message_length_be = htonl(message_length);
-    std::memcpy(extension_handshake, &message_length_be, sizeof(uint32_t));
-    extension_handshake[4] = 20; // message ID
+    const uint32_t message_length = payload.size() + 1;
+    std::string extension_handshake;
+    extension_handshake.resize(message_length);
     extension_handshake[5] = 0; // extended message ID
-    std::memcpy(extension_handshake + 6, payload.c_str(), payload.size());
+    std::memcpy(extension_handshake.data() + 1, payload.c_str(), payload.size());
 
     std::cout << "Sending extension handshake " << std::endl;
 
@@ -270,26 +268,25 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     }
     std::cout << std::endl;
 
-    if (const size_t sent_bytes = send(sock, extension_handshake, message_length + 4, 0);
-        sent_bytes != message_length + 4) {
-        close(sock);
-        throw std::runtime_error("Failed to send extension handshake.");
-    }
+    send_message(sock, EXTENDED, extension_handshake);
 
     std::cout << "Receiving extension handshake response " << std::endl;
 
-    std::string extended_handshake_response{};
-    extended_handshake_response.resize(200);
-
-    if (const ssize_t extension_received_bytes = recv(sock, extended_handshake_response.data(), 200, 0);
-        extension_received_bytes < 0) {
+    auto extended_handshake_response = receive_message(sock);
+    if (extended_handshake_response.message_type != EXTENDED) {
         close(sock);
-        throw std::runtime_error("Failed to receive extension handshake response.");
+        throw std::runtime_error("Expected EXTENDED message, but received " + extended_handshake_response.message_type);
     }
 
-    for (auto byte : extended_handshake_response) {
+    if (extended_handshake_response.payload[0] != 0) {
+        close(sock);
+        throw std::runtime_error("Invalid extended handshake response");
+    }
+
+    for (auto byte : extended_handshake_response.payload) {
         std::cout << static_cast<int>(byte) << " ";
     }
+
 
     return Peer{peer_id, ip, port, sock};
 }
