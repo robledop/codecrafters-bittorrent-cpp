@@ -16,12 +16,15 @@
 Torrent::Torrent(json json_object):
     announce{json_object["announce"]},
     info{Info{json_object["info"]}},
+    info_hash{},
     tracker{0, 0, 0, 0, {}} {
     std::cout << "Announce: " << announce << std::endl;
     std::cout << "Info: " << std::endl;
     std::cout << "\tName: " << info.name << std::endl;
     std::cout << "\tLength: " << info.length << std::endl;
     std::cout << "\tPiece length: " << info.piece_length << std::endl;
+
+    info_hash = info.sha1();
 
     tracker = get_tracker();
 
@@ -35,23 +38,25 @@ Torrent::Torrent(json json_object):
 }
 
 Torrent::Torrent(const std::string& announce, const std::string& info_hash)
-    : announce{announce}, info{1, "", 0, ""},
+    : announce{announce},
+      info{1, "", 0, ""},
+      info_hash{info_hash},
       tracker{0, 0, 0, 0, {}} {
     std::cout << "Announce: " << announce << std::endl;
     std::cout << "Info hash: " << info_hash << std::endl;
 
-    try {
-        tracker = get_tracker(hex_to_binary(info_hash));
-        for (auto& peer : tracker.get_peers()) {
-            peers_queue.push(peer);
-        }
-
-        auto peer = tracker.get_peers().at(0);
-        auto handshake = magnet_handshake(peer.first, peer.second, info_hash);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error getting peers: " << e.what() << std::endl;
-    }
+    // try {
+    //     tracker = get_tracker(hex_to_binary(info_hash));
+    //     for (auto& peer : tracker.get_peers()) {
+    //         peers_queue.push(peer);
+    //     }
+    //
+    //     auto peer = tracker.get_peers().at(0);
+    //     auto handshake = magnet_handshake(peer.first, peer.second, info_hash);
+    // }
+    // catch (const std::exception& e) {
+    //     std::cerr << "Error getting peers: " << e.what() << std::endl;
+    // }
 }
 
 auto Torrent::parse_torrent_file(char* path) -> Torrent {
@@ -82,18 +87,8 @@ auto Torrent::parse_magnet_link(const std::string& magnet_link) -> Torrent {
     const auto tracker_url = magnet_link.substr(tr_start + 3, tr_end - tr_start - 3);
     const auto peer_address = magnet_link.substr(x_pe_start + 6, x_pe_end - x_pe_start - 6);
 
+    std::cout << "Tracker URL: " << cpr::util::urlDecode(tracker_url) << std::endl;
     std::cout << "Info Hash: " << info_hash << std::endl;
-    if (tr_start != std::string::npos) {
-        std::cout << "Tracker URL: " << cpr::util::urlDecode(tracker_url) << std::endl;
-    }
-
-    if (dn_start != std::string::npos) {
-        std::cout << "File Name: " << file_name << std::endl;
-    }
-
-    if (x_pe_start != std::string::npos) {
-        std::cout << "Peer Address: " << peer_address << std::endl;
-    }
 
     auto info = Info{0, file_name, 0, ""};
     return Torrent{cpr::util::urlDecode(tracker_url), info_hash};
@@ -129,58 +124,7 @@ auto Torrent::get_tracker(std::string info_hash) const -> Tracker {
     }
 }
 
-auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
-    std::cout << "Handshake: " << ip << ":" << port << std::endl;
-    const int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        throw std::runtime_error("Socket creation failed.");
-    }
-
-    sockaddr_in peer_addr = {};
-    peer_addr.sin_family = AF_INET;
-    peer_addr.sin_port = htons(port);
-    if (inet_pton(AF_INET, ip.c_str(), &peer_addr.sin_addr) <= 0) {
-        throw std::runtime_error("Invalid address / Address not supported. " + ip);
-    }
-
-    if (connect(sock, reinterpret_cast<sockaddr*>(&peer_addr), sizeof(peer_addr)) < 0) {
-        throw std::runtime_error("Connection failed.");
-    }
-
-    unsigned char handshake[68] = {};
-
-    handshake[0] = 19;
-
-    const auto protocol = "BitTorrent protocol";
-    std::memcpy(handshake + 1, protocol, 19);
-
-    std::memcpy(handshake + 28, hex_to_binary(info.sha1()).c_str(), 20);
-    std::memcpy(handshake + 48, "robledo-pazotto-bitt", 20);
-
-    if (const ssize_t sent_bytes = send(sock, handshake, sizeof(handshake), 0); sent_bytes != sizeof(handshake)) {
-        close(sock);
-        throw std::runtime_error("Send failed.");
-    }
-
-    unsigned char handshake_response[68] = {};
-    ssize_t received_bytes = recv(sock, handshake_response, sizeof(handshake_response), 0);
-    if (received_bytes < 0) {
-        close(sock);
-        throw std::runtime_error("Failed to receive handshake response.");
-    }
-
-    if (received_bytes != sizeof(handshake_response)) {
-        close(sock);
-        throw std::runtime_error("Incomplete handshake response.");
-    }
-
-    const std::string response(reinterpret_cast<char*>(handshake_response), 68);
-    const std::string peer_id = response.substr(48, 20);
-
-    return Peer{peer_id, ip, port, sock};
-}
-
-auto Torrent::magnet_handshake(const std::string& ip, int port, const std::string& info_hash) -> Peer {
+auto Torrent::extension_handshake(const std::string& ip, const int port) const -> Peer {
     std::cout << "Handshake: " << ip << ":" << port << std::endl;
 
     const int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -238,8 +182,94 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     const std::string response{reinterpret_cast<char*>(handshake_response), 68};
     const std::string peer_id{response.substr(48, 20)};
 
-    std::cout << "Peer ID: " << to_hex_string(peer_id) << std::endl;
+    return Peer{peer_id, ip, port, sock};
+}
 
+auto Torrent::handshake(const std::string& ip, const int port) const -> Peer {
+    std::cout << "Handshake: " << ip << ":" << port << std::endl;
+    const int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        throw std::runtime_error("Socket creation failed.");
+    }
+
+    sockaddr_in peer_addr = {};
+    peer_addr.sin_family = AF_INET;
+    peer_addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, ip.c_str(), &peer_addr.sin_addr) <= 0) {
+        throw std::runtime_error("Invalid address / Address not supported. " + ip);
+    }
+
+    if (connect(sock, reinterpret_cast<sockaddr*>(&peer_addr), sizeof(peer_addr)) < 0) {
+        throw std::runtime_error("Connection failed.");
+    }
+
+    unsigned char handshake[68] = {};
+
+    handshake[0] = 19;
+
+    const auto protocol = "BitTorrent protocol";
+    std::memcpy(handshake + 1, protocol, 19);
+
+    std::memcpy(handshake + 28, hex_to_binary(info.sha1()).c_str(), 20);
+    std::memcpy(handshake + 48, "robledo-pazotto-bitt", 20);
+
+    if (const ssize_t sent_bytes = send(sock, handshake, sizeof(handshake), 0); sent_bytes != sizeof(handshake)) {
+        close(sock);
+        throw std::runtime_error("Send failed.");
+    }
+
+    unsigned char handshake_response[68] = {};
+    ssize_t received_bytes = recv(sock, handshake_response, sizeof(handshake_response), 0);
+    if (received_bytes < 0) {
+        close(sock);
+        throw std::runtime_error("Failed to receive handshake response.");
+    }
+
+    if (received_bytes != sizeof(handshake_response)) {
+        close(sock);
+        throw std::runtime_error("Incomplete handshake response.");
+    }
+
+    const std::string response(reinterpret_cast<char*>(handshake_response), 68);
+    const std::string peer_id = response.substr(48, 20);
+
+    return Peer{peer_id, ip, port, sock};
+}
+
+void Torrent::populate_magnet_info(int sock) {
+    auto extended_metadata_response = receive_message(sock);
+
+    if (extended_metadata_response.message_type != EXTENDED) {
+        close(sock);
+        throw std::runtime_error(
+            "Expected EXTENDED message, but received " + static_cast<int>(extended_metadata_response.message_type));
+    }
+
+    if (extended_metadata_response.payload[0] != MY_METADATA_ID) {
+        close(sock);
+        throw std::runtime_error("Invalid extended metadata response");
+    }
+
+    size_t pos = 0;
+    auto header_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
+    if (header_json["msg_type"] != EXTENDED_DATA) {
+        close(sock);
+        throw std::runtime_error("Invalid extended metadata response");
+    }
+
+    auto metadata_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
+
+    info.name = metadata_json["name"].get<std::string>();
+    info.piece_length = metadata_json["piece length"].get<size_t>();
+    info.length = metadata_json["length"].get<size_t>();
+    info.pieces = metadata_json["pieces"].get<std::string>();
+
+    for (auto& peer : tracker.get_peers()) {
+        peers_queue.push(peer);
+    }
+}
+
+void Torrent::magnet_handshake(int sock) {
     if (auto bitfield_message = receive_message(sock); bitfield_message.message_type != BITFIELD) {
         close(sock);
         throw std::runtime_error("Expected BITFIELD message, but received " + bitfield_message.message_type);
@@ -249,16 +279,15 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
 
     json payload_json = json::parse(R"(
     {
-      "m": {"ut_metadata": 1}
+      "m": {"ut_metadata": 16}
     }
 )"
     );
 
     const std::string payload = BDecoder::encode_bencoded_value(payload_json);
-    const uint32_t message_length = payload.size() + 1;
     std::string extension_handshake;
-    extension_handshake.resize(message_length);
-    extension_handshake[5] = 0; // extended message ID. 0 is for extended handshake
+    extension_handshake.resize(payload.size() + 1);
+    extension_handshake[0] = EXTENDED_HANDSHAKE;
     std::memcpy(extension_handshake.data() + 1, payload.c_str(), payload.size());
 
     send_message(sock, EXTENDED, extension_handshake);
@@ -269,7 +298,7 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
         throw std::runtime_error("Expected EXTENDED message, but received " + extended_handshake_response.message_type);
     }
 
-    if (extended_handshake_response.payload[0] != 0) {
+    if (extended_handshake_response.payload[0] != EXTENDED_HANDSHAKE) {
         close(sock);
         throw std::runtime_error("Invalid extended handshake response");
     }
@@ -278,7 +307,6 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
     auto extended_message_payload = BDecoder::decode_bencoded_value(extended_handshake_response.payload.substr(1), pos);
 
     auto m = extended_message_payload["m"];
-    auto metadata_size = extended_message_payload["metadata_size"].get<int64_t>();
     if (m.find("ut_metadata") == m.end()) {
         close(sock);
         throw std::runtime_error("Peer does not support metadata");
@@ -297,33 +325,37 @@ auto Torrent::magnet_handshake(const std::string& ip, int port, const std::strin
 
     send_message(sock, EXTENDED, extended_request);
 
+    // return peer_metadata_extension_id;
 
-    auto extended_metadata_response = receive_message(sock);
-    if (extended_metadata_response.message_type != EXTENDED) {
-        close(sock);
-        throw std::runtime_error("Expected EXTENDED message, but received " + extended_metadata_response.message_type);
-    }
-
-    pos = 0;
-    auto header_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
-    if (header_json["msg_type"] != EXTENDED_DATA) {
-        close(sock);
-        throw std::runtime_error("Invalid extended metadata response");
-    }
-
-    auto total_size = header_json["total_size"].get<int64_t>();
-
-    std::cout << "Metadata size: " << metadata_size << std::endl;
-    std::cout << "Total size: " << total_size << std::endl;
-
-    auto metadata_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
-
-    info.name = metadata_json["name"].get<std::string>();
-    info.piece_length = metadata_json["piece length"].get<size_t>();
-    info.length = metadata_json["length"].get<size_t>();
-    info.pieces = metadata_json["pieces"].get<std::string>();
-
-    return Peer{peer_id, ip, port, sock};
+    // auto extended_metadata_response = receive_message(sock);
+    //
+    // if (extended_metadata_response.message_type != EXTENDED) {
+    //     close(sock);
+    //     throw std::runtime_error(
+    //         "Expected EXTENDED message, but received " + static_cast<int>(extended_metadata_response.message_type));
+    // }
+    //
+    // if (extended_metadata_response.payload[0] != MY_METADATA_ID) {
+    //     close(sock);
+    //     throw std::runtime_error(
+    //         "Invalid extended metadata response: " + static_cast<int>(extended_handshake_response.payload[0]));
+    // }
+    //
+    // pos = 0;
+    // auto header_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
+    // if (header_json["msg_type"] != EXTENDED_DATA) {
+    //     close(sock);
+    //     throw std::runtime_error("Invalid extended metadata response");
+    // }
+    //
+    // auto metadata_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
+    //
+    // info.name = metadata_json["name"].get<std::string>();
+    // info.piece_length = metadata_json["piece length"].get<size_t>();
+    // info.length = metadata_json["length"].get<size_t>();
+    // info.pieces = metadata_json["pieces"].get<std::string>();
+    //
+    // return Peer{peer_id, ip, port, sock};
 }
 
 void Torrent::download_piece(int piece_index, const std::string& file_name) {

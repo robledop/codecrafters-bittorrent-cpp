@@ -2,8 +2,6 @@
 #include <string>
 #include <fstream>
 #include <cpr/cpr.h>
-#include <netinet/in.h>
-#include <cmath>
 
 #include "b_decoder.h"
 #include "peer.h"
@@ -106,10 +104,20 @@ auto main(int argc, char* argv[]) -> int {
     else if (command == "magnet_handshake") {
         std::string magnet_link = argv[2];
         auto torrent = Torrent::parse_magnet_link(magnet_link);
+        torrent.tracker = torrent.get_tracker(hex_to_binary(torrent.info_hash));
+        auto first_peer = torrent.tracker.get_peers().at(0);
+        auto connected_peer = torrent.extension_handshake(first_peer.first, first_peer.second);
+        Torrent::magnet_handshake(connected_peer.socket);
+        std::cout << "Peer ID: " << to_hex_string(connected_peer.peer_id) << std::endl;
     }
     else if (command == "magnet_info") {
         std::string magnet_link = argv[2];
         auto torrent = Torrent::parse_magnet_link(magnet_link);
+        torrent.tracker = torrent.get_tracker(hex_to_binary(torrent.info_hash));
+        auto first_peer = torrent.tracker.get_peers().at(0);
+        auto connected_peer = torrent.extension_handshake(first_peer.first, first_peer.second);
+        Torrent::magnet_handshake(connected_peer.socket);
+        torrent.populate_magnet_info(connected_peer.socket);
 
         std::cout << "Tracker URL: " << torrent.announce << std::endl;
         std::cout << "Length: " << torrent.info.length << std::endl;

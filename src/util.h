@@ -76,8 +76,6 @@ inline auto receive_message(const int sockfd) -> Message {
         return {CHOKE, "", 0};
     }
 
-    std::cout << "Received message length: " << length << std::endl;
-
     std::vector<char> buffer(length);
 
     ssize_t total_received = 0;
