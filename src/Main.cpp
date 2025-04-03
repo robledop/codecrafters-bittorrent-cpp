@@ -105,8 +105,8 @@ auto main(int argc, char* argv[]) -> int {
         std::string magnet_link = argv[2];
         auto torrent = Torrent::parse_magnet_link(magnet_link);
         torrent.tracker = torrent.get_tracker(hex_to_binary(torrent.info_hash));
-        auto first_peer = torrent.tracker.get_peers().at(0);
-        auto connected_peer = torrent.extension_handshake(first_peer.first, first_peer.second);
+        auto [ip, port] = torrent.tracker.get_peers().at(0);
+        auto connected_peer = torrent.extension_handshake(ip, port);
         Torrent::magnet_handshake(connected_peer.socket);
         std::cout << "Peer ID: " << to_hex_string(connected_peer.peer_id) << std::endl;
     }
@@ -114,8 +114,8 @@ auto main(int argc, char* argv[]) -> int {
         std::string magnet_link = argv[2];
         auto torrent = Torrent::parse_magnet_link(magnet_link);
         torrent.tracker = torrent.get_tracker(hex_to_binary(torrent.info_hash));
-        auto first_peer = torrent.tracker.get_peers().at(0);
-        auto connected_peer = torrent.extension_handshake(first_peer.first, first_peer.second);
+        auto [ip, port] = torrent.tracker.get_peers().at(0);
+        auto connected_peer = torrent.extension_handshake(ip, port);
         Torrent::magnet_handshake(connected_peer.socket);
         torrent.populate_magnet_info(connected_peer.socket);
 
@@ -134,19 +134,21 @@ auto main(int argc, char* argv[]) -> int {
         int piece_index = std::stoi(argv[5]);
         auto torrent = Torrent::parse_magnet_link(magnet_link);
         torrent.tracker = torrent.get_tracker(hex_to_binary(torrent.info_hash));
-        auto first_peer = torrent.tracker.get_peers().at(0);
-        auto connected_peer = torrent.extension_handshake(first_peer.first, first_peer.second);
+        auto [ip, port] = torrent.tracker.get_peers().at(0);
+        auto connected_peer = torrent.extension_handshake(ip, port);
         Torrent::magnet_handshake(connected_peer.socket);
         torrent.populate_magnet_info(connected_peer.socket);
         torrent.download_piece(piece_index, save_to);
     }
     else if (command == "magnet_download") {
+        // TODO: This can be simplified. It's like this because the tests seem to need things to be done separately.
         std::string save_to = argv[3];
         std::string magnet_link = argv[4];
         auto torrent = Torrent::parse_magnet_link(magnet_link);
         torrent.tracker = torrent.get_tracker(hex_to_binary(torrent.info_hash));
-        auto first_peer = torrent.tracker.get_peers().at(0);
-        auto connected_peer = torrent.extension_handshake(first_peer.first, first_peer.second);
+        // TODO: Add error handling for when the peer is not available
+        auto [ip, port] = torrent.tracker.get_peers().at(0);
+        auto connected_peer = torrent.extension_handshake(ip, port);
         Torrent::magnet_handshake(connected_peer.socket);
         torrent.populate_magnet_info(connected_peer.socket);
         torrent.download(save_to);

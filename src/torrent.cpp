@@ -44,19 +44,6 @@ Torrent::Torrent(const std::string& announce, const std::string& info_hash)
       tracker{0, 0, 0, 0, {}} {
     std::cout << "Announce: " << announce << std::endl;
     std::cout << "Info hash: " << info_hash << std::endl;
-
-    // try {
-    //     tracker = get_tracker(hex_to_binary(info_hash));
-    //     for (auto& peer : tracker.get_peers()) {
-    //         peers_queue.push(peer);
-    //     }
-    //
-    //     auto peer = tracker.get_peers().at(0);
-    //     auto handshake = magnet_handshake(peer.first, peer.second, info_hash);
-    // }
-    // catch (const std::exception& e) {
-    //     std::cerr << "Error getting peers: " << e.what() << std::endl;
-    // }
 }
 
 auto Torrent::parse_torrent_file(char* path) -> Torrent {
@@ -328,38 +315,6 @@ void Torrent::magnet_handshake(int sock) {
     std::memcpy(extended_request.data() + 1, extended_request_payload.c_str(), extended_request_payload.size());
 
     send_message(sock, EXTENDED, extended_request);
-
-    // return peer_metadata_extension_id;
-
-    // auto extended_metadata_response = receive_message(sock);
-    //
-    // if (extended_metadata_response.message_type != EXTENDED) {
-    //     close(sock);
-    //     throw std::runtime_error(
-    //         "Expected EXTENDED message, but received " + static_cast<int>(extended_metadata_response.message_type));
-    // }
-    //
-    // if (extended_metadata_response.payload[0] != MY_METADATA_ID) {
-    //     close(sock);
-    //     throw std::runtime_error(
-    //         "Invalid extended metadata response: " + static_cast<int>(extended_handshake_response.payload[0]));
-    // }
-    //
-    // pos = 0;
-    // auto header_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
-    // if (header_json["msg_type"] != EXTENDED_DATA) {
-    //     close(sock);
-    //     throw std::runtime_error("Invalid extended metadata response");
-    // }
-    //
-    // auto metadata_json = BDecoder::decode_bencoded_value(extended_metadata_response.payload.substr(1), pos);
-    //
-    // info.name = metadata_json["name"].get<std::string>();
-    // info.piece_length = metadata_json["piece length"].get<size_t>();
-    // info.length = metadata_json["length"].get<size_t>();
-    // info.pieces = metadata_json["pieces"].get<std::string>();
-    //
-    // return Peer{peer_id, ip, port, sock};
 }
 
 void Torrent::download_piece(int piece_index, const std::string& file_name) {
@@ -398,7 +353,6 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
         throw std::runtime_error("Expected UNCHOKE message, but received " + unchoke_message.message_type);
     }
 
-
     uint32_t number_of_pieces = get_number_of_pieces();
     bool is_last_piece = piece_index == number_of_pieces - 1;
     uint32_t file_begin = piece_index * info.piece_length;
@@ -411,7 +365,7 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
 
     size_t remaining_bytes = actual_piece_length;
 
-    // TODO: Limit the number of requests to avoid overwhelming the peer
+    // TODO: Limit the number of concurrent requests to avoid overwhelming the peer
     for (size_t block = 0; block < number_of_piece_blocks; block++) {
         bool is_last_block = block == number_of_piece_blocks - 1;
 
