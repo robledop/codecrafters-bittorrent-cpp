@@ -370,6 +370,10 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     auto x = peers_queue_pop();
     peers_queue.push(x);
     auto [ip, port] = peers_queue_pop();
+    if (port == -1) {
+        std::cout << "No peers available" << std::endl;
+        return;
+    }
 
     auto peer = handshake(ip, port);
 
