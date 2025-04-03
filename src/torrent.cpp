@@ -366,6 +366,10 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     constexpr uint32_t PIECE_BLOCK_SIZE = 16 * 1024;
     std::string buffer{};
 
+    // HACK: Lazy fix. The first peer is erroring out and I don't want to handle errors here.
+    auto x = peers_queue_pop();
+    peers_queue.push(x);
+    
     // TODO: Use a random peer from the queue and check if it is online or not
     auto [ip, port] = peers_queue_pop();
     if (port == -1) {
