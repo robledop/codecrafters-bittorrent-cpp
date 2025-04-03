@@ -317,19 +317,19 @@ void Torrent::magnet_handshake(int sock) {
     send_message(sock, EXTENDED, extended_request);
 }
 
-void Torrent::download_piece(int piece_index, const std::string& file_name) {
+auto Torrent::download_piece(int piece_index, const std::string& file_name) -> bool {
     constexpr uint32_t PIECE_BLOCK_SIZE = 16 * 1024;
     std::string buffer{};
 
     // HACK: Lazy fix. The first peer is erroring out and I don't want to handle errors here.
     auto x = peers_queue_pop();
     peers_queue.push(x);
-    
+
     // TODO: Use a random peer from the queue and check if it is online or not
     auto [ip, port] = peers_queue_pop();
     if (port == -1) {
         std::cout << "No peers available" << std::endl;
-        return;
+        return false;
     }
 
     auto peer = handshake(ip, port);
@@ -431,6 +431,7 @@ void Torrent::download_piece(int piece_index, const std::string& file_name) {
     file.write(buffer.c_str(), static_cast<long>(buffer.length()));
 
     peers_queue_push({ip, port});
+    return true;
 }
 
 void Torrent::download_task(const std::string& save_to) {
@@ -441,7 +442,9 @@ void Torrent::download_task(const std::string& save_to) {
         }
         std::cout << "Downloading piece " << piece_index << std::endl;
         try {
-            download_piece(piece_index, save_to + ".part" + std::to_string(piece_index));
+            if (!download_piece(piece_index, save_to + ".part" + std::to_string(piece_index))) {
+                throw std::runtime_error("Piece download failed");
+            }
         }
         catch (const std::exception& e) {
             std::cerr << "Error downloading piece " << piece_index << ": " << e.what() << std::endl;

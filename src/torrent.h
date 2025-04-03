@@ -29,7 +29,7 @@ struct Torrent
     static auto parse_torrent_file(char* path) -> Torrent;
     static auto parse_magnet_link(const std::string& magnet_link) -> Torrent;
     void populate_magnet_info(int sock);
-    void download_piece(int piece_index, const std::string& file_name = "");
+    bool download_piece(int piece_index, const std::string& file_name = "");
     void download_task(const std::string& save_to);
     void download(std::string save_to = "");
     [[nodiscard]] auto get_tracker(std::string info_hash = "") const -> Tracker;
