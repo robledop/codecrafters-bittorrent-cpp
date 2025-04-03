@@ -329,6 +329,7 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
     auto [ip, port] = peers_queue_pop();
     if (port == -1) {
         std::cout << "No peers available" << std::endl;
+
         return false;
     }
 
@@ -343,6 +344,8 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
     if (auto bitfield_message = receive_message(peer.socket); bitfield_message.message_type != BITFIELD) {
         close(peer.socket);
         std::cerr << "Expected BITFIELD message, but received " + bitfield_message.message_type << std::endl;
+
+        peers_queue_push({ip, port});
         return false;
     }
 
@@ -352,6 +355,8 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
     if (auto unchoke_message = receive_message(peer.socket); unchoke_message.message_type != UNCHOKE) {
         close(peer.socket);
         std::cerr << "Expected UNCHOKE message, but received " + unchoke_message.message_type << std::endl;
+
+        peers_queue_push({ip, port});
         return false;
     }
 
@@ -399,6 +404,7 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
             close(peer.socket);
             std::cerr << "Expected PIECE, but received " + piece_message.message_type << std::endl;
 
+            peers_queue_push({ip, port});
             return false;
         }
 
@@ -407,6 +413,7 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
             std::cerr << "Incorrect piece index. Expected: " << piece_index <<
                 ", but received: " << received_piece_index << std::endl;
 
+            peers_queue_push({ip, port});
             return false;
         }
         uint32_t received_piece_begin = ntohl(*reinterpret_cast<uint32_t*>(piece_message.payload.data() + 4));
@@ -424,6 +431,7 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
         std::cerr << "Piece hash mismatch. Expected: " << expected_piece_hash <<
             ", but received: " << piece_hash << std::endl;
 
+        peers_queue_push({ip, port});
         return false;
     }
 
@@ -444,6 +452,10 @@ auto Torrent::download_piece(int piece_index, const std::string& file_name) -> b
 
 void Torrent::download_task(const std::string& save_to) {
     while (!work_queue_empty()) {
+        if (peers_queue_empty()) {
+            continue;
+        }
+
         const int piece_index = work_queue_pop();
         if (piece_index == -1) {
             break;
